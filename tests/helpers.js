@@ -20,7 +20,7 @@ print(json.dumps(out))
 `;
 
 function readZipPy(file, password, { data = true } = {}) {
-  const out = execFileSync('python3', ['-c', PY, file, password, data ? '1' : '0'], {
+  const out = execFileSync(pythonCmd() || 'python3', ['-c', PY, file, password, data ? '1' : '0'], {
     maxBuffer: 64 * 1024 * 1024,
     stdio: ['ignore', 'pipe', 'pipe'],
   });
@@ -31,13 +31,26 @@ function tmpDir() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'access-pack-'));
 }
 
+// Ищем утилиту в PATH сами: «which» есть не везде (на Windows его нет)
 function which(cmd) {
-  try {
-    execFileSync('which', [cmd], { stdio: 'ignore' });
-    return true;
-  } catch {
-    return false;
+  const exts = process.platform === 'win32' ? (process.env.PATHEXT || '.EXE;.CMD;.BAT').split(';') : [''];
+  for (const dir of (process.env.PATH || '').split(path.delimiter)) {
+    for (const ext of exts) {
+      try {
+        fs.accessSync(path.join(dir, cmd + ext), fs.constants.X_OK);
+        return true;
+      } catch {
+        // следующий вариант
+      }
+    }
   }
+  return false;
+}
+
+// Python нужен как независимый читатель ZipCrypto; в CI на Windows он зовётся «python»
+function pythonCmd() {
+  for (const cmd of ['python3', 'python']) if (which(cmd)) return cmd;
+  return '';
 }
 
 // .rdp в том виде, как его сохраняет mstsc: UTF-16 LE с BOM
@@ -45,4 +58,4 @@ function utf16rdp(text) {
   return Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from(text, 'utf16le')]);
 }
 
-module.exports = { readZipPy, tmpDir, which, utf16rdp };
+module.exports = { readZipPy, tmpDir, which, utf16rdp, pythonCmd };

@@ -6,7 +6,9 @@ const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 const { buildBatch, preflight } = require('../src/main/build');
 const { defaultSettings } = require('../src/main/settings');
-const { readZipPy, tmpDir, utf16rdp, which } = require('./helpers');
+const { readZipPy, tmpDir, utf16rdp, which, pythonCmd } = require('./helpers');
+
+const skipPy = !pythonCmd() && 'python3 не установлен';
 
 const NOW = new Date(2026, 8, 22, 15, 30);
 const settings = defaultSettings();
@@ -79,7 +81,7 @@ test('архив на каждого сотрудника, прогресс и �
   assert.ok(txt.includes(res.results[0].password) && txt.includes(res.results[1].password));
 });
 
-test('в архиве PDF с полным логином, вложения и .rdp с логином', async () => {
+test('в архиве PDF с полным логином, вложения и .rdp с логином', { skip: skipPy }, async () => {
   const env = setup();
   const res = await run(env);
   const entries = readZipPy(path.join(res.folder, 'Иванов_Иван.zip'), res.results[0].password);
@@ -92,7 +94,7 @@ test('в архиве PDF с полным логином, вложения и .r
   assert.deepEqual([...byName['ПО/setup.bin'].data], [1, 2, 3]);
 });
 
-test('без доменной учётки .rdp кладётся без изменений', async () => {
+test('без доменной учётки .rdp кладётся без изменений', { skip: skipPy }, async () => {
   const env = setup();
   const res = await run(env);
   const entries = readZipPy(path.join(res.folder, 'Петрова_Анна.zip'), res.results[1].password);
@@ -100,7 +102,7 @@ test('без доменной учётки .rdp кладётся без изме
   assert.deepEqual(rdp, utf16rdp(RDP_SRC));
 });
 
-test('без вложений в архиве только PDF', async () => {
+test('без вложений в архиве только PDF', { skip: skipPy }, async () => {
   const env = setup();
   const res = await run(env, { attachments: [] });
   const entries = readZipPy(path.join(res.folder, 'Петрова_Анна.zip'), res.results[1].password);

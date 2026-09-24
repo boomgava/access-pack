@@ -6,12 +6,14 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const { spawnSync } = require('node:child_process');
 const { ZipWriter } = require('../src/core/zip/writer');
-const { readZipPy, tmpDir, which } = require('./helpers');
+const { readZipPy, tmpDir, which, pythonCmd } = require('./helpers');
 
 const PASSWORD = 'Kq7m-Xp4r-Tz9w';
 const sha = (b) => crypto.createHash('sha256').update(b).digest('hex');
 const has7z = which('7zz');
 const skip7z = !has7z && '7zz не установлен (brew install sevenzip)';
+const skipPy = !pythonCmd() && 'python3 не установлен';
+const skipUnzip = !which('unzip') && 'unzip не установлен';
 
 async function makeArchive(method, dir) {
   const big = crypto.randomBytes(3 * 1024 * 1024 + 123); // несколько чанков потока и блоков ключевого потока
@@ -31,7 +33,7 @@ async function makeArchive(method, dir) {
   };
 }
 
-test('ZipCrypto: Python читает имена, флаги и содержимое', async () => {
+test('ZipCrypto: Python читает имена, флаги и содержимое', { skip: skipPy }, async () => {
   const { file, expected } = await makeArchive('zipcrypto', tmpDir());
   const entries = readZipPy(file, PASSWORD);
   assert.deepEqual(
@@ -49,19 +51,19 @@ test('ZipCrypto: Python читает имена, флаги и содержим�
   }
 });
 
-test('ZipCrypto: неверный пароль не подходит', async () => {
+test('ZipCrypto: неверный пароль не подходит', { skip: skipPy }, async () => {
   const { file } = await makeArchive('zipcrypto', tmpDir());
   assert.throws(() => readZipPy(file, 'wrong-pass'));
 });
 
-test('ZipCrypto: unzip -t проходит проверку CRC', async () => {
+test('ZipCrypto: unzip -t проходит проверку CRC', { skip: skipUnzip }, async () => {
   const { file } = await makeArchive('zipcrypto', tmpDir());
   const r = spawnSync('unzip', ['-t', '-P', PASSWORD, file], { encoding: 'utf8' });
   assert.equal(r.status, 0, r.stdout + r.stderr);
   assert.match(r.stdout, /No errors detected/);
 });
 
-test('AES-256: метод 99 и флаги в заголовках', async () => {
+test('AES-256: метод 99 и флаги в заголовках', { skip: skipPy }, async () => {
   const { file } = await makeArchive('aes256', tmpDir());
   const f = readZipPy(file, PASSWORD, { data: false }).find((e) => e.name === 'пусто.txt');
   assert.equal(f.method, 99);
