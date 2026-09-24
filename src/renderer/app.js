@@ -508,10 +508,8 @@ function bottomBar() {
       h('select', { class: 'field', onchange: (ev) => { state.encryption = ev.target.value; } },
         h('option', { value: 'zipcrypto', selected: state.encryption === 'zipcrypto' }, 'ZipCrypto — откроет Проводник'),
         h('option', { value: 'aes256', selected: state.encryption === 'aes256' }, 'AES-256 — нужен 7-Zip'))),
-    h('div', { class: 'opt' }, h('span', {}, 'Куда'),
-      h('div', { class: `path${outBad ? ' invalid' : ''}`, title: state.outDir }, shortPath(state.outDir) || 'не выбрано'),
-      h('button', { class: 'btn small', onclick: pickOutDir }, 'Изменить…')),
-    h('label', { class: 'opt check-inline', title: 'Появится поле почты у каждого сотрудника' },
+    // галочка стоит в одном ряду со списками и выглядит как остальные поля
+    h('label', { class: 'opt toggle', title: 'Появится поле почты у каждого сотрудника' },
       h('input', {
         type: 'checkbox',
         checked: state.sendAfterBuild,
@@ -523,12 +521,15 @@ function bottomBar() {
         },
       }),
       h('span', {}, 'Отправить письма')),
-    h('div', { class: 'spacer' }),
-    h('div', { class: 'build-status', id: 'build-status' }),
-    h('button', { class: 'btn', onclick: startMemos, disabled: n === 0 || state.building },
-      icon('file'), 'Только памятка'),
-    h('button', { class: 'btn primary', onclick: startBuild, disabled: n === 0 || state.building },
-      icon('lock'), `Собрать ${n} ${plural(n, 'архив', 'архива', 'архивов')}`));
+    h('div', { class: 'opt out' }, h('span', {}, 'Куда'),
+      h('div', { class: `path${outBad ? ' invalid' : ''}`, title: state.outDir }, shortPath(state.outDir) || 'не выбрано'),
+      h('button', { class: 'btn small', onclick: pickOutDir }, 'Изменить…')),
+    h('div', { class: 'bottom-actions' },
+      h('div', { class: 'build-status', id: 'build-status' }),
+      h('button', { class: 'btn', onclick: startMemos, disabled: n === 0 || state.building },
+        icon('file'), 'Только памятка'),
+      h('button', { class: 'btn primary', onclick: startBuild, disabled: n === 0 || state.building },
+        icon('lock'), `Собрать ${n} ${plural(n, 'архив', 'архива', 'архивов')}`)));
 }
 
 function viewEdit() {

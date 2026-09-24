@@ -106,6 +106,7 @@ function renderSettingsView({ settings, api, onSave, onCancel }) {
       h('div', { class: 'grow' },
         h('select', {
           class: 'field',
+          dataset: { focusKey: 'mascot' },
           onchange: (ev) => { draft.mascot = ev.target.value; draw(); },
         },
         h('option', { value: '', selected: !draft.mascot }, 'Нет'),
@@ -400,6 +401,12 @@ function renderSettingsView({ settings, api, onSave, onCancel }) {
   }
 
   function draw() {
+    // перерисовка заменяет всё дерево, поэтому запоминаем прокрутку и активное поле,
+    // иначе на любое изменение страница прыгает вверх
+    const scrolled = root.querySelector('.settings-body');
+    const scrollTop = scrolled ? scrolled.scrollTop : 0;
+    const active = document.activeElement;
+    const focusPath = active && active.dataset ? active.dataset.focusKey : '';
     root.replaceChildren(
       h('header', { class: 'topbar' },
         h('div', { class: 'brand' }, icon('settings'), 'Настройки'),
@@ -448,6 +455,13 @@ function renderSettingsView({ settings, api, onSave, onCancel }) {
         appearanceSection(),
         transferSection(),
         updatesSection()));
+    // возвращаем прокрутку и фокус на то же поле
+    const body = root.querySelector('.settings-body');
+    if (body) body.scrollTop = scrollTop;
+    if (focusPath) {
+      const again = root.querySelector(`[data-focus-key="${focusPath}"]`);
+      if (again) again.focus({ preventScroll: true });
+    }
   }
 
   draw();
