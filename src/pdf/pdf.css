@@ -1,0 +1,32 @@
+@page { size: A4; margin: 16mm; }
+:root {
+  --ink: #16181d;
+  --muted: #6b7280;
+  --line: #e4e6ea;
+  --accent: #3b5bdb;
+  --soft: #f5f6f8;
+  --secret: #fff1c2;
+}
+* { box-sizing: border-box; }
+html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+body { margin: 0; font-family: Inter, sans-serif; color: var(--ink); font-size: 10.5pt; line-height: 1.45; }
+.head { display: flex; justify-content: space-between; align-items: center; padding-bottom: 6mm; border-bottom: 1px solid var(--line); margin-bottom: 8mm; }
+.logo { max-height: 14mm; max-width: 60mm; object-fit: contain; }
+.company { font-weight: 700; font-size: 15pt; letter-spacing: .02em; }
+.date { color: var(--muted); font-size: 9.5pt; }
+.kicker { text-transform: uppercase; letter-spacing: .12em; font-size: 8.5pt; color: var(--accent); font-weight: 600; }
+.fio { font-size: 22pt; font-weight: 700; margin: 1.5mm 0 8mm; line-height: 1.15; }
+.card { break-inside: avoid; border: 1px solid var(--line); border-radius: 3mm; padding: 5mm 6mm; margin-bottom: 5mm; }
+.card-head { display: flex; justify-content: space-between; align-items: baseline; gap: 4mm; margin-bottom: 3.5mm; }
+.sys { font-weight: 600; font-size: 12.5pt; }
+.url { color: var(--accent); font-size: 9.5pt; text-decoration: none; white-space: nowrap; }
+.creds { display: grid; grid-template-columns: 20mm 1fr; row-gap: 2.5mm; align-items: center; background: var(--soft); border-radius: 2mm; padding: 3.5mm 4mm; }
+.label { color: var(--muted); font-size: 9pt; }
+.value { font-family: 'JetBrains Mono', monospace; font-weight: 500; font-size: 12pt; word-break: break-all; }
+.secret { background: var(--secret); border-radius: 1.5mm; padding: .6mm 2mm; }
+.steps { margin: 3.5mm 0 0; padding-left: 5mm; color: #374151; }
+.steps li { margin: 1mm 0; padding-left: 1mm; }
+.foot { margin-top: 8mm; padding-top: 5mm; border-top: 1px solid var(--line); font-size: 9pt; color: var(--muted); display: flex; gap: 10mm; justify-content: space-between; break-inside: avoid; }
+.warn { max-width: 95mm; }
+.support { text-align: right; }
+.support-title { font-weight: 600; color: var(--ink); margin-bottom: 1mm; }

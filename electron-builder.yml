@@ -1,0 +1,21 @@
+appId: io.github.accesspack
+productName: AccessPack
+directories:
+  output: dist
+files:
+  - src/**/*
+  - package.json
+mac:
+  target:
+    - target: dmg
+      arch: [arm64, x64]
+  category: public.app-category.utilities
+  identity: "-"
+dmg:
+  artifactName: AccessPack-${version}-${arch}.dmg
+win:
+  target:
+    - target: portable
+      arch: [x64]
+portable:
+  artifactName: AccessPack-${version}-portable.exe
