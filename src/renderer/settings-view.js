@@ -10,6 +10,9 @@ function renderSettingsView({ settings, api, onSave, onCancel }) {
   let passwordSaved = false;
   let mailCheck = '';
   let updateCheck = '';
+  let transferNote = '';
+  let pending = null; // разобранный файл настроек: ждём выбора режима
+  let importMode = 'shared';
 
   const labeled = (label, control) => h('label', { class: 'lbl' }, label, control);
   // Для блоков с кнопками — не <label>: иначе клик по подписи «нажимает» первую кнопку
@@ -144,6 +147,82 @@ function renderSettingsView({ settings, api, onSave, onCancel }) {
       oninput: (ev) => { draft[key] = Number(ev.target.value); value.textContent = `${draft[key]}%`; },
     });
     return group(label, h('div', { class: 'row' }, input, value, hint && h('span', { class: 'hint' }, hint)));
+  }
+
+  function transferSection() {
+    const summary = pending && pending.summary;
+    return h('section', { class: 'section' },
+      h('h2', {}, 'Перенос настроек'),
+      h('span', { class: 'hint' }, 'Файл с настройками и логотипами — чтобы передать коллеге или перенести на другой компьютер. Пароль почты не экспортируется: он лежит в ключнице системы'),
+      h('div', { class: 'card settings-card' },
+        h('div', { class: 'row' },
+          h('button', {
+            class: 'btn small',
+            onclick: async () => {
+              const res = await api.exportSettings();
+              if (res.canceled) return;
+              transferNote = res.ok
+                ? `Сохранено: ${res.filePath}${res.logos ? `, логотипов: ${res.logos}` : ''}`
+                : `Не вышло: ${res.error}`;
+              draw();
+            },
+          }, 'Экспортировать…'),
+          h('button', {
+            class: 'btn small',
+            onclick: async () => {
+              const res = await api.readImport();
+              if (res.canceled) return;
+              if (!res.ok) {
+                transferNote = res.error;
+                pending = null;
+              } else {
+                pending = res;
+                transferNote = '';
+              }
+              draw();
+            },
+          }, 'Импортировать…'),
+          transferNote ? h('span', { class: 'hint' }, transferNote) : null),
+        pending
+          ? h('div', { class: 'import-box' },
+            h('div', { class: 'hint' },
+              `В файле: систем ${summary.systems}, профилей ${summary.profiles}`
+              + (summary.logos ? `, логотипов ${summary.logos}` : '')
+              + (summary.mail ? ', настройки почты' : '')
+              + (pending.exportedAt ? ` · выгружено ${pending.exportedAt.slice(0, 10)}` : '')),
+            h('label', { class: 'check' },
+              h('input', {
+                type: 'radio',
+                name: 'import-mode',
+                checked: importMode === 'shared',
+                onchange: () => { importMode = 'shared'; },
+              }),
+              'Только общее: системы, профили, шаблон письма и вид. Мои папки и мои адреса почты останутся'),
+            h('label', { class: 'check' },
+              h('input', {
+                type: 'radio',
+                name: 'import-mode',
+                checked: importMode === 'all',
+                onchange: () => { importMode = 'all'; },
+              }),
+              'Всё из файла, включая папки и адреса почты — для переноса на свой новый компьютер'),
+            h('div', { class: 'row' },
+              h('button', {
+                class: 'btn small primary',
+                onclick: async () => {
+                  const res = await api.applyImport({ settings: pending.settings, files: pending.files, mode: importMode });
+                  if (!res.ok) {
+                    transferNote = `Не вышло: ${res.error}`;
+                    draw();
+                    return;
+                  }
+                  pending = null;
+                  // настройки на диске уже заменены — показываем их и закрываем экран
+                  onSave(res.settings);
+                },
+              }, 'Применить'),
+              h('button', { class: 'btn small ghost', onclick: () => { pending = null; draw(); } }, 'Отменить')))
+          : null));
   }
 
   function updatesSection() {
@@ -367,6 +446,7 @@ function renderSettingsView({ settings, api, onSave, onCancel }) {
                 h('option', { value: 'aes256', selected: draft.encryption === 'aes256' }, 'AES-256 — нужен 7-Zip; устойчив к атаке по известному файлу'))))),
         mailSection(),
         appearanceSection(),
+        transferSection(),
         updatesSection()));
   }
 

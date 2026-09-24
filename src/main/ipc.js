@@ -14,6 +14,7 @@ const { renderTemplate } = require('../core/mail-text');
 const { sendMail, testConnection } = require('./smtp');
 const { saveSecret, readSecret, hasSecret, available } = require('./secrets');
 const { checkForUpdate } = require('./updater');
+const { buildExport, parseImport, mergeImported } = require('../core/settings-transfer');
 
 function registerIpc({ getWindow, setDirty }) {
   const dir = app.getPath('userData');
@@ -73,6 +74,56 @@ function registerIpc({ getWindow, setDirty }) {
   ipcMain.handle('history:delete', (_e, id) => deleteHistoryEntry(dir, id));
 
   ipcMain.handle('update:check', () => checkForUpdate());
+
+  // Перенос настроек: файл с настройками и логотипами, без пароля почты
+  ipcMain.handle('settings:export', async () => {
+    const { settings } = await loadSettings(dir, defaults);
+    const { canceled, filePath } = await dialog.showSaveDialog(getWindow(), {
+      title: 'Экспорт настроек',
+      defaultPath: `Пакет доступов — настройки ${new Date().toISOString().slice(0, 10)}.json`,
+      filters: [{ name: 'Настройки', extensions: ['json'] }],
+    });
+    if (canceled || !filePath) return { ok: false, canceled: true };
+    const files = {};
+    for (const profile of settings.profiles || []) {
+      if (!profile.logoFile) continue;
+      const url = await logoDataUrl(dir, profile.logoFile);
+      if (url) files[profile.logoFile] = url;
+    }
+    const payload = buildExport(settings, { files, appVersion: app.getVersion() });
+    await fsp.writeFile(filePath, JSON.stringify(payload, null, 2), 'utf8');
+    return { ok: true, filePath, logos: Object.keys(files).length };
+  });
+
+  ipcMain.handle('settings:importRead', async () => {
+    const { canceled, filePaths } = await dialog.showOpenDialog(getWindow(), {
+      title: 'Импорт настроек',
+      properties: ['openFile'],
+      filters: [{ name: 'Настройки', extensions: ['json'] }],
+    });
+    if (canceled || !filePaths.length) return { ok: false, canceled: true };
+    try {
+      const res = parseImport(await fsp.readFile(filePaths[0], 'utf8'));
+      return res.ok ? { ...res, filePath: filePaths[0] } : res;
+    } catch (e) {
+      return { ok: false, error: `Файл не прочитался: ${e.message}` };
+    }
+  });
+
+  // Применяем уже разобранный файл: логотипы кладём в папку данных
+  ipcMain.handle('settings:importApply', async (_e, { settings: incoming, files = {}, mode }) => {
+    const { settings: current } = await loadSettings(dir, defaults);
+    for (const [name, url] of Object.entries(files)) {
+      const match = /^data:[^;]+;base64,(.+)$/.exec(String(url));
+      if (!match) continue;
+      const logos = path.join(dir, 'logos');
+      await fsp.mkdir(logos, { recursive: true });
+      await fsp.writeFile(path.join(logos, path.basename(name)), Buffer.from(match[1], 'base64'));
+    }
+    const next = mergeImported(current, incoming, { mode });
+    await saveSettings(dir, next);
+    return { ok: true, settings: next };
+  });
   ipcMain.handle('app:version', () => app.getVersion());
 
   ipcMain.handle('mail:savePassword', (_e, value) => saveSecret(dir, 'smtp', value));

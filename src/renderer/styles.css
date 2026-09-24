@@ -106,6 +106,7 @@
 .mail-status svg.i { vertical-align: -2px; margin-right: 4px; }
 .notice.update { background: var(--accent-soft); color: var(--accent); }
 .notice.update svg.i { flex: none; }
+.import-box { display: grid; gap: 8px; margin-top: 12px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); }
 * { box-sizing: border-box; }
 html, body { height: 100%; margin: 0; }
 body { background: var(--bg); color: var(--ink); font: 14px/1.45 Inter, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
