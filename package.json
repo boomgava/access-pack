@@ -11,8 +11,8 @@
     "test": "node --test \"tests/**/*.test.js\"",
     "smoke:pdf": "electron scripts/smoke-pdf.js",
     "smoke:build": "electron scripts/smoke-build.js",
-    "dist:mac": "electron-builder --mac",
-    "dist:win": "electron-builder --win"
+    "dist:mac": "electron-builder --mac --publish never",
+    "dist:win": "electron-builder --win --publish never"
   },
   "devDependencies": {
     "@fontsource/inter": "^5.3.0",
