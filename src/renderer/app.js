@@ -507,7 +507,8 @@ function bottomBar() {
     h('label', { class: 'opt' }, h('span', {}, 'Шифрование'),
       h('select', { class: 'field', onchange: (ev) => { state.encryption = ev.target.value; } },
         h('option', { value: 'zipcrypto', selected: state.encryption === 'zipcrypto' }, 'ZipCrypto — откроет Проводник'),
-        h('option', { value: 'aes256', selected: state.encryption === 'aes256' }, 'AES-256 — нужен 7-Zip'))),
+        h('option', { value: 'aes256', selected: state.encryption === 'aes256' }, 'AES-256 — нужен 7-Zip'),
+        h('option', { value: 'none', selected: state.encryption === 'none' }, 'Без пароля — архив открывается сразу'))),
     // галочка стоит в одном ряду со списками и выглядит как остальные поля
     h('label', { class: 'opt toggle', title: 'Появится поле почты у каждого сотрудника' },
       h('input', {
@@ -600,6 +601,7 @@ async function sendOne(row) {
     to: row.email,
     archive: row.archive,
     folder: state.result.folder,
+    noPassword: !state.result.passwordsFile,
   });
   state.mailStatus[row.fio] = res.ok
     ? { state: 'ok', text: `отправлено на ${row.email}` }
@@ -655,7 +657,9 @@ function viewResult() {
         h('p', { class: 'hint' }, 'Это только памятки с доступами, без архивов и паролей. Отправлять их почтой без шифрования не стоит.')));
   }
   const title = `Готово: ${ok.length} ${plural(ok.length, 'архив', 'архива', 'архивов')}${failed ? `, не собрано: ${failed}` : ''}`;
-  const allText = ok.map((x) => `${x.fio}\t${x.archive}\t${x.password}`).join('\n');
+  // Сборка без пароля: файла паролей нет, колонку с паролем не показываем
+  const noPw = !r.passwordsFile;
+  const allText = ok.map((x) => (noPw ? `${x.fio}\t${x.archive}` : `${x.fio}\t${x.archive}\t${x.password}`)).join('\n');
   const waiting = ok.filter((x) => x.email && state.mailStatus[x.fio]?.state !== 'ok').length;
   const showMail = state.sendAfterBuild || ok.some((x) => x.email);
   return h('div', { class: 'layout' },
@@ -668,16 +672,16 @@ function viewResult() {
         h('thead', {}, h('tr', {},
           h('th', {}, 'Сотрудник'),
           h('th', {}, 'Архив'),
-          h('th', {}, 'Пароль архива'),
+          noPw ? null : h('th', {}, 'Пароль архива'),
           showMail ? h('th', {}, 'Кому отправить') : null,
           showMail ? h('th', {}, 'Письмо') : null,
           h('th', {}))),
         h('tbody', {}, r.results.map((x) => (x.error
-          ? h('tr', { class: 'failed' }, h('td', {}, x.fio), h('td', { colspan: showMail ? '5' : '3' }, `Не собран: ${x.error}`))
+          ? h('tr', { class: 'failed' }, h('td', {}, x.fio), h('td', { colspan: String((showMail ? 5 : 3) - (noPw ? 1 : 0)) }, `Не собран: ${x.error}`))
           : h('tr', {},
             h('td', {}, x.fio),
             h('td', { class: 'mono' }, x.archive),
-            h('td', { class: 'mono pw' }, x.password),
+            noPw ? null : h('td', { class: 'mono pw' }, x.password),
             showMail
               ? h('td', {}, h('input', {
                 class: 'field mail-input',
@@ -698,11 +702,13 @@ function viewResult() {
                   onclick: () => sendOne(x),
                 }, icon('send'))
                 : null,
-              h('button', {
-                class: 'icon-btn',
-                title: 'Скопировать пароль',
-                onclick: (ev) => copyText(x.password, ev.currentTarget),
-              }, icon('copy')))))))),
+              noPw
+                ? null
+                : h('button', {
+                  class: 'icon-btn',
+                  title: 'Скопировать пароль',
+                  onclick: (ev) => copyText(x.password, ev.currentTarget),
+                }, icon('copy')))))))),
       h('div', { class: 'result-actions' },
         showMail
           ? h('button', {
@@ -721,9 +727,15 @@ function viewResult() {
         ? h('p', { class: 'hint' }, 'Почта не настроена: Настройки → «Почта» — сервер, логин, пароль и адрес отправителя.')
         : null,
       showMail && mailReady() && mail.cc
-        ? h('p', { class: 'hint' }, `Копия каждого письма уйдёт на ${mail.cc}. Пароль от архива в письмо не попадает.`)
+        ? h('p', { class: 'hint' }, `Копия каждого письма уйдёт на ${mail.cc}.${noPw ? '' : ' Пароль от архива в письмо не попадает.'}`)
         : null,
-      h('p', { class: 'hint' }, 'Пароли также сохранены в «Пароли.txt» в этой папке. Не отправляйте его вместе с архивами.')));
+      // Для архивов без пароля письмо уходит по своему шаблону — про пароль в нём не сказано
+      showMail && noPw
+        ? h('p', { class: 'hint' }, 'Письма уйдут по тексту для архивов без пароля: Настройки → «Почта».')
+        : null,
+      h('p', { class: 'hint' }, noPw
+        ? 'Архивы собраны без пароля: содержимое прочитает любой, кто получит файл.'
+        : 'Пароли также сохранены в «Пароли.txt» в этой папке. Не отправляйте его вместе с архивами.')));
 }
 
 // ---------- история выданных архивов ----------
@@ -763,6 +775,12 @@ async function clearHistoryAll() {
   render();
 }
 
+function encryptionLabel(method) {
+  if (method === 'aes256') return 'AES-256';
+  if (method === 'none') return 'Без пароля';
+  return 'ZipCrypto';
+}
+
 function historyDetails(e) {
   const accounts = (e.accounts || []).map((a) => h('div', { class: 'detail-row' },
     h('span', { class: 'detail-label' }, a.system),
@@ -776,7 +794,7 @@ function historyDetails(e) {
       ...accounts,
       attachments,
       e.folder ? h('div', { class: 'detail-row' }, h('span', { class: 'detail-label' }, 'Папка'), h('span', { class: 'path', title: e.folder }, shortPath(e.folder))) : null,
-      e.encryption ? h('div', { class: 'detail-row' }, h('span', { class: 'detail-label' }, 'Шифрование'), h('span', {}, e.encryption === 'aes256' ? 'AES-256' : 'ZipCrypto')) : null)));
+      e.encryption ? h('div', { class: 'detail-row' }, h('span', { class: 'detail-label' }, 'Шифрование'), h('span', {}, encryptionLabel(e.encryption))) : null)));
 }
 
 function historyRow(e) {

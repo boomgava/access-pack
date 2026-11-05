@@ -88,3 +88,16 @@ test('старый файл настроек: новые системы доез
   assert.deepEqual(settings.systems[0].steps, ['Откройте файл подключения .rdp из архива']);
   assert.equal(settings.systems[1].name, 'Мой Яндекс', 'правки пользователя не затираются');
 });
+
+test('старый файл настроек: текст письма для архивов без пароля доезжает', async () => {
+  const dir = tmpDir();
+  const old = {
+    version: 3,
+    mail: { host: 'smtp.example.com', template: 'свой текст про пароль' },
+  };
+  fs.writeFileSync(path.join(dir, 'settings.json'), JSON.stringify(old));
+  const { settings } = await loadSettings(dir);
+  assert.equal(settings.mail.template, 'свой текст про пароль', 'свой шаблон не затёрт');
+  assert.match(settings.mail.templateNoPassword, /Направляю Вам архив/);
+  assert.doesNotMatch(settings.mail.templateNoPassword, /[Пп]ароль от архива/);
+});

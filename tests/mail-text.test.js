@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { renderTemplate } = require('../src/core/mail-text');
+const { renderTemplate, pickTemplate } = require('../src/core/mail-text');
 
 test('подстановки имени, фамилии и архива', () => {
   const out = renderTemplate('Здравствуйте, {Имя}! Архив {Архив} для {ФИО}. Фамилия: {Фамилия}', {
@@ -23,4 +23,17 @@ test('пустой шаблон и пустые данные не ломают �
   assert.equal(renderTemplate('', {}), '');
   assert.equal(renderTemplate('Текст без подстановок'), 'Текст без подстановок');
   assert.equal(renderTemplate('{Имя}', {}), '');
+});
+
+test('архив без пароля — свой текст письма', () => {
+  const mail = { template: 'Пароль сообщу отдельно', templateNoPassword: 'Архив открывается сразу' };
+  assert.equal(pickTemplate(mail, { noPassword: true }), 'Архив открывается сразу');
+  assert.equal(pickTemplate(mail, { noPassword: false }), 'Пароль сообщу отдельно');
+  assert.equal(pickTemplate(mail), 'Пароль сообщу отдельно');
+});
+
+test('если текст для архивов без пароля стёрли — берём обычный', () => {
+  assert.equal(pickTemplate({ template: 'обычный', templateNoPassword: '' }, { noPassword: true }), 'обычный');
+  assert.equal(pickTemplate({}, { noPassword: true }), '');
+  assert.equal(pickTemplate(null, { noPassword: true }), '');
 });

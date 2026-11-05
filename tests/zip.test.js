@@ -96,6 +96,41 @@ test('ZipCrypto: 7-Zip тоже распаковывает', { skip: skip7z }, a
   assert.equal(sha(fs.readFileSync(path.join(out, 'ПО/установщик.bin'))), sha(expected['ПО/установщик.bin']));
 });
 
+test('Без пароля: флаг шифрования снят, Python читает содержимое', { skip: skipPy }, async () => {
+  const { file, expected } = await makeArchive('none', tmpDir());
+  const entries = readZipPy(file, '');
+  for (const e of entries) {
+    assert.equal(e.flags, 0x0800, e.name);
+    if (e.name.endsWith('/')) continue;
+    assert.equal(e.method, 8);
+    assert.equal(sha(e.data), sha(expected[e.name]), e.name);
+  }
+});
+
+test('Без пароля: unzip -t проходит без -P', { skip: skipUnzip }, async () => {
+  const { file } = await makeArchive('none', tmpDir());
+  const r = spawnSync('unzip', ['-t', file], { encoding: 'utf8' });
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  assert.match(r.stdout, /No errors detected/);
+});
+
+test('Без пароля: 7-Zip распаковывает, кириллица и содержимое целы', { skip: skip7z }, async () => {
+  const dir = tmpDir();
+  const { file, expected } = await makeArchive('none', dir);
+  const out = path.join(dir, 'out');
+  const r = spawnSync('7zz', ['x', `-o${out}`, '-y', file], { encoding: 'utf8' });
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  for (const [name, data] of Object.entries(expected)) {
+    assert.equal(sha(fs.readFileSync(path.join(out, name))), sha(data), name);
+  }
+});
+
+test('Без пароля: пароль не нужен', async () => {
+  const w = await ZipWriter.create(path.join(tmpDir(), 'plain.zip'), { password: '', method: 'none' });
+  await w.addBuffer('a.txt', Buffer.from('1'));
+  await w.close();
+});
+
 test('два файла с одним именем — ошибка', async () => {
   const w = await ZipWriter.create(path.join(tmpDir(), 'd.zip'), { password: PASSWORD, method: 'zipcrypto' });
   await w.addBuffer('a.txt', Buffer.from('1'));

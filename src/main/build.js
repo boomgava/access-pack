@@ -87,7 +87,7 @@ async function buildBatch(input, { renderPdf, onProgress = () => {} }) {
     const emp = employees[i];
     const fio = emp.fio.trim();
     const archive = uniqueName(`${archiveBaseName(fio)}.zip`, taken);
-    const password = generateArchivePassword();
+    const password = encryption === 'none' ? null : generateArchivePassword();
     try {
       await buildOne({
         emp,
@@ -106,6 +106,9 @@ async function buildBatch(input, { renderPdf, onProgress = () => {} }) {
     }
     onProgress({ done: i + 1, total: employees.length });
   }
+
+  // Архивы без пароля: список паролей писать нечего
+  if (encryption === 'none') return { folder, passwordsFile: null, results };
 
   const passwordsFile = path.join(folder, 'Пароли.txt');
   await fsp.writeFile(passwordsFile, formatPasswordsTxt({ date: now, encryption, results }));

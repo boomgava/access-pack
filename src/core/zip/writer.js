@@ -13,7 +13,7 @@ const METHOD_STORE = 0;
 const METHOD_DEFLATE = 8;
 const METHOD_AES = 99;
 const MAX32 = 0xffffffff;
-const METHODS = ['zipcrypto', 'aes256'];
+const METHODS = ['zipcrypto', 'aes256', 'none'];
 
 function dosDateTime(d) {
   const year = Math.max(1980, d.getFullYear());
@@ -80,8 +80,8 @@ async function crcOfFile(srcPath) {
 
 class ZipWriter {
   static async create(filePath, { password, method }) {
-    if (!password) throw new Error('Нужен пароль архива');
     if (!METHODS.includes(method)) throw new Error(`Неизвестное шифрование: ${method}`);
+    if (method !== 'none' && !password) throw new Error('Нужен пароль архива');
     const fh = await fsp.open(filePath, 'wx');
     return new ZipWriter(filePath, fh, password, method);
   }
@@ -150,10 +150,11 @@ class ZipWriter {
   async #addEntry(name, crc, usize, openStream, mtime) {
     const nameBuf = this.#claim(name);
     const aes = this.method === 'aes256';
+    const plain = this.method === 'none';
     const entry = {
       nameBuf,
       ...dosDateTime(mtime),
-      flags: FLAG_UTF8 | FLAG_ENCRYPTED,
+      flags: plain ? FLAG_UTF8 : FLAG_UTF8 | FLAG_ENCRYPTED,
       method: aes ? METHOD_AES : METHOD_DEFLATE,
       version: aes ? 51 : 20,
       crc: aes ? 0 : crc, // AE-2 не хранит CRC
@@ -166,15 +167,18 @@ class ZipWriter {
     await this.#append(localHeader(entry)); // размер допишем после данных
     const dataStart = this.offset;
 
-    const enc = aes ? new WinZipAesEncryptor(this.password) : new ZipCryptoEncryptor(this.password);
-    await this.#append(aes ? enc.prefix() : enc.header(crc));
+    let enc = null;
+    if (!plain) {
+      enc = aes ? new WinZipAesEncryptor(this.password) : new ZipCryptoEncryptor(this.password);
+      await this.#append(aes ? enc.prefix() : enc.header(crc));
+    }
     const self = this;
     await pipeline(
       openStream(),
       zlib.createDeflateRaw({ level: 9 }),
       new Transform({
         transform(chunk, _enc, cb) {
-          cb(null, enc.encrypt(chunk));
+          cb(null, enc ? enc.encrypt(chunk) : chunk);
         },
       }),
       async function (source) {

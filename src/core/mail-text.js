@@ -20,5 +20,12 @@
     });
   }
 
-  return { renderTemplate };
+  // У архивов без пароля свой текст письма; если его стёрли — берём обычный
+  function pickTemplate(mail, { noPassword = false } = {}) {
+    const m = mail || {};
+    if (!noPassword) return m.template || '';
+    return m.templateNoPassword || m.template || '';
+  }
+
+  return { renderTemplate, pickTemplate };
 });

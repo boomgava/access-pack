@@ -10,7 +10,7 @@ const { preflight, buildBatch, buildMemos } = require('./build');
 const { PdfRenderer } = require('./pdf');
 const { validateBatch } = require('../core/validate');
 const { historyEntries } = require('../core/history-entry');
-const { renderTemplate } = require('../core/mail-text');
+const { renderTemplate, pickTemplate } = require('../core/mail-text');
 const { sendMail, testConnection } = require('./smtp');
 const { saveSecret, readSecret, hasSecret, available } = require('./secrets');
 const { checkForUpdate } = require('./updater');
@@ -155,7 +155,8 @@ function registerIpc({ getWindow, setDirty }) {
           contentType: file.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'application/zip',
         });
       }
-      const text = renderTemplate(mail.template, { fio: req.fio, archive: req.archive });
+      const template = pickTemplate(mail, { noPassword: Boolean(req.noPassword) });
+      const text = renderTemplate(template, { fio: req.fio, archive: req.archive });
       const res = await sendMail({
         ...mail,
         password: await readSecret(dir, 'smtp'),

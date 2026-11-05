@@ -81,6 +81,24 @@ test('архив на каждого сотрудника, прогресс и �
   assert.ok(txt.includes(res.results[0].password) && txt.includes(res.results[1].password));
 });
 
+test('без пароля: паролей нет, Пароли.txt не создаётся', async () => {
+  const env = setup();
+  const res = await run(env, { encryption: 'none' });
+  assert.equal(res.passwordsFile, null);
+  for (const r of res.results) {
+    assert.equal(r.error, null);
+    assert.equal(r.password, null);
+  }
+  assert.deepEqual(fs.readdirSync(res.folder).sort(), ['Иванов_Иван.zip', 'Петрова_Анна.zip'].sort());
+});
+
+test('без пароля: архив открывается без пароля', { skip: skipPy }, async () => {
+  const env = setup();
+  const res = await run(env, { encryption: 'none' });
+  const entries = readZipPy(path.join(res.folder, 'Петрова_Анна.zip'), '');
+  assert.ok(zipNames(entries).includes('Доступы — Петрова А.pdf'));
+});
+
 test('в архиве PDF с полным логином, вложения и .rdp с логином', { skip: skipPy }, async () => {
   const env = setup();
   const res = await run(env);

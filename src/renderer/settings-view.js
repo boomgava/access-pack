@@ -320,6 +320,13 @@ function renderSettingsView({ settings, api, onSave, onCancel }) {
             value: mail.template || '',
             oninput: (ev) => { mail.template = ev.target.value; },
           })),
+        labeled('Текст письма для архивов без пароля',
+          h('textarea', {
+            class: 'field',
+            rows: '6',
+            value: mail.templateNoPassword || '',
+            oninput: (ev) => { mail.templateNoPassword = ev.target.value; },
+          })),
         h('div', { class: 'row' },
           h('button', {
             class: 'btn small',
@@ -369,7 +376,7 @@ function renderSettingsView({ settings, api, onSave, onCancel }) {
     if (!draft.profiles.some((p) => p.id === draft.defaultProfileId)) draft.defaultProfileId = draft.profiles[0].id;
     if (!['system', 'light', 'dark', 'kawaii'].includes(draft.theme)) draft.theme = 'system';
     const mail = draft.mail || (draft.mail = {});
-    for (const key of ['host', 'user', 'from', 'fromName', 'cc', 'subject', 'template']) {
+    for (const key of ['host', 'user', 'from', 'fromName', 'cc', 'subject', 'template', 'templateNoPassword']) {
       mail[key] = String(mail[key] || '').trim();
     }
     mail.port = Math.min(65535, Math.max(1, Number(mail.port) || 587));
@@ -450,7 +457,8 @@ function renderSettingsView({ settings, api, onSave, onCancel }) {
             labeled('Шифрование по умолчанию',
               h('select', { class: 'field', onchange: (ev) => { draft.encryption = ev.target.value; } },
                 h('option', { value: 'zipcrypto', selected: draft.encryption === 'zipcrypto' }, 'ZipCrypto — откроет Проводник Windows'),
-                h('option', { value: 'aes256', selected: draft.encryption === 'aes256' }, 'AES-256 — нужен 7-Zip; устойчив к атаке по известному файлу'))))),
+                h('option', { value: 'aes256', selected: draft.encryption === 'aes256' }, 'AES-256 — нужен 7-Zip; устойчив к атаке по известному файлу'),
+                h('option', { value: 'none', selected: draft.encryption === 'none' }, 'Без пароля — архив открывается сразу, пароли не создаются'))))),
         mailSection(),
         appearanceSection(),
         transferSection(),
