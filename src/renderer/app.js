@@ -451,7 +451,13 @@ function libraryGroup(group, missing, onToggle) {
 // Перерисовать только панель вложений: счётчики разделов меняются при каждой галочке,
 // а полный render() сбрасывал бы фокус в полях сотрудников
 function refreshAttachments() {
-  document.getElementById('attachments')?.replaceWith(attachmentsPanel());
+  const old = document.getElementById('attachments');
+  if (!old) return;
+  // панель пересобирается целиком — прокрутку списка переносим на новую
+  const scrollTop = old.scrollTop;
+  const next = attachmentsPanel();
+  old.replaceWith(next);
+  next.scrollTop = scrollTop;
 }
 
 function attachmentsPanel() {
