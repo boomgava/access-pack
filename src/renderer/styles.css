@@ -99,7 +99,8 @@
 .card-mail { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
 .card-mail svg.i { color: var(--muted); }
 .check-inline { flex-direction: row; align-items: center; gap: 6px; }
-.mail-input { min-width: 240px; }
+/* .field ниже сбрасывает min-width в 0, поэтому здесь нужна та же специфичность */
+.field.mail-input { min-width: 220px; }
 .mail-status { font-size: 12.5px; color: var(--muted); white-space: nowrap; }
 .mail-status.ok { color: var(--ok); }
 .mail-status.error { color: var(--danger); white-space: normal; max-width: 220px; }
@@ -223,10 +224,14 @@ textarea.field { resize: vertical; line-height: 1.45; }
 .result-table th { text-align: left; font-size: 12px; color: var(--muted); font-weight: 600; padding: 10px 14px; border-bottom: 1px solid var(--line); background: var(--bg); }
 .result-table td { padding: 9px 14px; border-bottom: 1px solid var(--line); }
 .result-table tr:last-child td { border-bottom: 0; }
-.result-table td.pw { font-weight: 600; letter-spacing: .02em; }
+/* пароль и имя архива не переносим: колонка берёт ширину по содержимому,
+   лишнее место отдаём ФИО и статусу письма — их рвать не жалко */
+.result-table td.pw { font-weight: 600; letter-spacing: .02em; white-space: nowrap; width: 1%; }
+.result-table td.mono { white-space: nowrap; width: 1%; }
+.result-table td.mail-status { white-space: normal; max-width: 260px; }
 .result-table td.act { width: 92px; text-align: right; white-space: nowrap; }
 .result-table tr.failed td { color: var(--danger); background: var(--danger-soft); }
-.result-actions { display: flex; gap: 10px; margin: 16px 0 8px; align-items: center; }
+.result-actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 16px 0 8px; align-items: center; }
 
 /* история выданных архивов */
 .history-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }

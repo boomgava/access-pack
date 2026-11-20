@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { renderTemplate, pickTemplate } = require('../src/core/mail-text');
+const { renderTemplate, pickTemplate, passwordsMail } = require('../src/core/mail-text');
 
 test('подстановки имени, фамилии и архива', () => {
   const out = renderTemplate('Здравствуйте, {Имя}! Архив {Архив} для {ФИО}. Фамилия: {Фамилия}', {
@@ -36,4 +36,18 @@ test('если текст для архивов без пароля стёрли
   assert.equal(pickTemplate({ template: 'обычный', templateNoPassword: '' }, { noPassword: true }), 'обычный');
   assert.equal(pickTemplate({}, { noPassword: true }), '');
   assert.equal(pickTemplate(null, { noPassword: true }), '');
+});
+
+test('письмо с паролями: папка в теме и в тексте, предупреждение на месте', () => {
+  const m = passwordsMail({ folder: '/Users/oleg/Desktop/Архивы/Доступы_2026-11-20_21-10', file: '/Users/oleg/Desktop/Архивы/Доступы_2026-11-20_21-10/Пароли.txt' });
+  assert.equal(m.subject, 'Пароли к архивам — Доступы_2026-11-20_21-10');
+  assert.match(m.text, /Папка: \/Users\/oleg\/Desktop\/Архивы\/Доступы_2026-11-20_21-10/);
+  assert.match(m.text, /не пересылайте вместе с архивами/);
+});
+
+test('письмо с паролями: без папки тема берётся от файла', () => {
+  const m = passwordsMail({ file: 'C:\\Архивы\\Пароли.txt' });
+  assert.equal(m.subject, 'Пароли к архивам — Пароли.txt');
+  assert.doesNotMatch(m.text, /Папка:/);
+  assert.equal(passwordsMail().subject, 'Пароли к архивам — ');
 });

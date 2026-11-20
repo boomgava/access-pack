@@ -10,7 +10,7 @@ const { preflight, buildBatch, buildMemos } = require('./build');
 const { PdfRenderer } = require('./pdf');
 const { validateBatch } = require('../core/validate');
 const { historyEntries } = require('../core/history-entry');
-const { renderTemplate, pickTemplate } = require('../core/mail-text');
+const { renderTemplate, pickTemplate, passwordsMail } = require('../core/mail-text');
 const { sendMail, testConnection } = require('./smtp');
 const { saveSecret, readSecret, hasSecret, available } = require('./secrets');
 const { checkForUpdate } = require('./updater');
@@ -170,6 +170,37 @@ function registerIpc({ getWindow, setDirty }) {
       return { ok: true, recipients: res.recipients };
     } catch (e) {
       return { ok: false, error: e.message };
+    }
+  });
+  // «Пароли.txt» отдельным письмом тому, кто указан в «Копия (Cc)»: архивы уходят
+  // сотрудникам, а список паролей — коллеге, который выдаёт доступы вместе со мной
+  ipcMain.handle('mail:sendPasswords', async (_e, req) => {
+    const { settings } = await loadSettings(dir, defaults);
+    const mail = settings.mail || {};
+    const from = { email: (mail.from || mail.user || '').trim(), name: (mail.fromName || '').trim() };
+    const to = String(mail.cc || '').trim();
+    try {
+      if (!to) throw new Error('В настройках почты не указана копия (Cc) — некому слать пароли');
+      if (!req.file) throw new Error('Файл с паролями не создан: архивы собраны без пароля');
+      const content = await fsp.readFile(req.file);
+      const { subject, text } = passwordsMail({ folder: req.folder, file: req.file });
+      const res = await sendMail({
+        ...mail,
+        password: await readSecret(dir, 'smtp'),
+        from,
+        to,
+        cc: '', // он и так единственный получатель
+        subject,
+        text,
+        attachments: [{
+          filename: path.basename(req.file),
+          content,
+          contentType: 'text/plain; charset=utf-8',
+        }],
+      });
+      return { ok: true, to, recipients: res.recipients };
+    } catch (e) {
+      return { ok: false, to, error: e.message };
     }
   });
   ipcMain.handle('history:clear', () => clearHistory(dir));

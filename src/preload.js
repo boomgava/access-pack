@@ -32,6 +32,7 @@ contextBridge.exposeInMainWorld('api', {
   keychainReady: () => ipcRenderer.invoke('mail:keychainReady'),
   testMail: () => ipcRenderer.invoke('mail:test'),
   sendMail: (req) => ipcRenderer.invoke('mail:send', req),
+  sendPasswords: (req) => ipcRenderer.invoke('mail:sendPasswords', req),
   listHistory: () => ipcRenderer.invoke('history:list'),
   deleteHistory: (id) => ipcRenderer.invoke('history:delete', id),
   clearHistory: () => ipcRenderer.invoke('history:clear'),

@@ -27,5 +27,16 @@
     return m.templateNoPassword || m.template || '';
   }
 
-  return { renderTemplate, pickTemplate };
+  // Письмо с «Паролями.txt» коллеге в копии: шаблоном не настраивается,
+  // потому что это служебное письмо самому себе, а не сотруднику
+  function passwordsMail({ folder = '', file = '' } = {}) {
+    const name = String(folder || file).split(/[\\/]/).filter(Boolean).pop() || '';
+    const where = folder ? `\nПапка: ${folder}` : '';
+    return {
+      subject: `Пароли к архивам — ${name}`,
+      text: `Во вложении пароли к архивам этой пачки.${where}\n\nФайл не пересылайте вместе с архивами.`,
+    };
+  }
+
+  return { renderTemplate, pickTemplate, passwordsMail };
 });

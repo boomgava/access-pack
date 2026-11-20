@@ -195,6 +195,7 @@ async function startBuild() {
       for (const row of res.results) row.email = byFio.get(row.fio) || '';
       state.result = res;
       state.mailStatus = {};
+      state.passwordsMail = null;
       state.view = 'result';
       api.setDirty(false);
     } else {
@@ -619,10 +620,32 @@ async function sendAll() {
       if (state.mailStatus[row.fio]?.state === 'ok') continue;
       await sendOne(row);
     }
+    // Список паролей коллеге в копии — чтобы у него были те же данные, что и у меня
+    if (passwordsMailReady() && state.passwordsMail?.state !== 'ok') await sendPasswords();
   } finally {
     state.sending = false;
     render();
   }
+}
+
+// Файл с паролями шлём туда же, куда уходят копии писем
+function passwordsMailReady() {
+  const mail = (state.settings && state.settings.mail) || {};
+  return Boolean(state.result && state.result.passwordsFile && mail.cc && mailReady());
+}
+
+async function sendPasswords() {
+  if (!passwordsMailReady()) return;
+  state.passwordsMail = { state: 'sending', text: 'отправляю пароли…' };
+  render();
+  const res = await api.sendPasswords({
+    file: state.result.passwordsFile,
+    folder: state.result.folder,
+  });
+  state.passwordsMail = res.ok
+    ? { state: 'ok', text: `пароли отправлены на ${res.to}` }
+    : { state: 'error', text: `пароли не отправлены: ${res.error}` };
+  render();
 }
 
 function mailStatusCell(row) {
@@ -717,6 +740,14 @@ function viewResult() {
             onclick: sendAll,
           }, icon('send'), state.sending ? 'Отправляю…' : `Отправить ${waiting} ${plural(waiting, 'письмо', 'письма', 'писем')}`)
           : null,
+        passwordsMailReady()
+          ? h('button', {
+            class: 'btn',
+            title: `Отправить «Пароли.txt» на ${mail.cc}`,
+            disabled: state.sending,
+            onclick: sendPasswords,
+          }, icon('send'), 'Отправить пароли')
+          : null,
         h('button', { class: `btn ${showMail ? '' : 'primary'}`, onclick: () => api.openFolder(r.folder) }, icon('folder'), 'Открыть папку'),
         h('button', { class: 'btn', onclick: (ev) => copyText(allText, ev.currentTarget) }, icon('copy'), 'Скопировать всё'),
         h('div', { class: 'spacer' }),
@@ -727,7 +758,10 @@ function viewResult() {
         ? h('p', { class: 'hint' }, 'Почта не настроена: Настройки → «Почта» — сервер, логин, пароль и адрес отправителя.')
         : null,
       showMail && mailReady() && mail.cc
-        ? h('p', { class: 'hint' }, `Копия каждого письма уйдёт на ${mail.cc}.${noPw ? '' : ' Пароль от архива в письмо не попадает.'}`)
+        ? h('p', { class: 'hint' }, `Копия каждого письма уйдёт на ${mail.cc}.${noPw ? '' : ' Пароль от архива в письмо не попадает — «Пароли.txt» уйдёт туда же отдельным письмом.'}`)
+        : null,
+      state.passwordsMail
+        ? h('p', { class: `hint mail-status ${state.passwordsMail.state}` }, state.passwordsMail.text)
         : null,
       // Для архивов без пароля письмо уходит по своему шаблону — про пароль в нём не сказано
       showMail && noPw
@@ -869,7 +903,15 @@ function viewProgress() {
       h('div', { class: 'bar' }, fill)));
 }
 
+// Перерисовка пересобирает всё дерево, поэтому прокрутку списков запоминаем сами:
+// иначе при добавлении учётки или сотрудника экран прыгает наверх
+const SCROLLED = '.panel, .result';
+let lastView = null;
+
 function render() {
+  const keepScroll = state.view === lastView
+    ? [...root.querySelectorAll(SCROLLED)].map((el) => el.scrollTop)
+    : [];
   let view;
   if (state.view === 'settings') {
     view = renderSettingsView({
@@ -886,6 +928,9 @@ function render() {
     view = viewEdit();
   }
   root.replaceChildren(view);
+  const scrolled = root.querySelectorAll(SCROLLED);
+  if (keepScroll.length === scrolled.length) scrolled.forEach((el, i) => { el.scrollTop = keepScroll[i]; });
+  lastView = state.view;
   if (state.building) root.append(viewProgress());
   if (state.view === 'edit') refreshErrors();
 }
