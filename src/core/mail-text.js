@@ -29,12 +29,15 @@
 
   // Письмо с «Паролями.txt» коллеге в копии: шаблоном не настраивается,
   // потому что это служебное письмо самому себе, а не сотруднику
-  function passwordsMail({ folder = '', file = '' } = {}) {
-    const name = String(folder || file).split(/[\\/]/).filter(Boolean).pop() || '';
+  // Слова «пароли» в письме нет: ни в теме, ни в имени вложения, ни в тексте —
+  // письмо лежит в чужом ящике, и по заголовку не должно быть видно, что внутри
+  function passwordsMail({ folder = '' } = {}) {
+    const batch = String(folder).split(/[\\/]/).filter(Boolean).pop() || '';
     const where = folder ? `\nПапка: ${folder}` : '';
     return {
-      subject: `Пароли к архивам — ${name}`,
-      text: `Во вложении пароли к архивам этой пачки.${where}\n\nФайл не пересылайте вместе с архивами.`,
+      subject: batch ? `Сводка — ${batch}` : 'Сводка',
+      filename: batch ? `${batch}.txt` : 'Сводка.txt',
+      text: `Во вложении — сводка по этой пачке.${where}\n\nФайл не пересылайте вместе с архивами.`,
     };
   }
 

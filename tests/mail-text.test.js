@@ -38,16 +38,21 @@ test('если текст для архивов без пароля стёрли
   assert.equal(pickTemplate(null, { noPassword: true }), '');
 });
 
-test('письмо с паролями: папка в теме и в тексте, предупреждение на месте', () => {
-  const m = passwordsMail({ folder: '/Users/oleg/Desktop/Архивы/Доступы_2026-11-20_21-10', file: '/Users/oleg/Desktop/Архивы/Доступы_2026-11-20_21-10/Пароли.txt' });
-  assert.equal(m.subject, 'Пароли к архивам — Доступы_2026-11-20_21-10');
+test('письмо коллеге: папка в теме, имени вложения и тексте', () => {
+  const m = passwordsMail({ folder: '/Users/oleg/Desktop/Архивы/Доступы_2026-11-20_21-10' });
+  assert.equal(m.subject, 'Сводка — Доступы_2026-11-20_21-10');
+  assert.equal(m.filename, 'Доступы_2026-11-20_21-10.txt');
   assert.match(m.text, /Папка: \/Users\/oleg\/Desktop\/Архивы\/Доступы_2026-11-20_21-10/);
   assert.match(m.text, /не пересылайте вместе с архивами/);
 });
 
-test('письмо с паролями: без папки тема берётся от файла', () => {
-  const m = passwordsMail({ file: 'C:\\Архивы\\Пароли.txt' });
-  assert.equal(m.subject, 'Пароли к архивам — Пароли.txt');
-  assert.doesNotMatch(m.text, /Папка:/);
-  assert.equal(passwordsMail().subject, 'Пароли к архивам — ');
+test('письмо коллеге: слова «пароль» нет нигде, даже без папки', () => {
+  for (const m of [passwordsMail({ folder: 'C:\\Архивы\\Доступы_2026-11-20' }), passwordsMail(), passwordsMail({ folder: '' })]) {
+    for (const part of [m.subject, m.filename, m.text]) assert.doesNotMatch(part, /парол/i);
+  }
+  const empty = passwordsMail();
+  assert.equal(empty.subject, 'Сводка');
+  assert.equal(empty.filename, 'Сводка.txt');
+  assert.doesNotMatch(empty.text, /Папка:/);
+  assert.equal(passwordsMail({ folder: 'C:\\Архивы\\Доступы_2026-11-20' }).filename, 'Доступы_2026-11-20.txt');
 });

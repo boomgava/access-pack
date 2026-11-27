@@ -183,7 +183,7 @@ function registerIpc({ getWindow, setDirty }) {
       if (!to) throw new Error('В настройках почты не указана копия (Cc) — некому слать пароли');
       if (!req.file) throw new Error('Файл с паролями не создан: архивы собраны без пароля');
       const content = await fsp.readFile(req.file);
-      const { subject, text } = passwordsMail({ folder: req.folder, file: req.file });
+      const { subject, text, filename } = passwordsMail({ folder: req.folder });
       const res = await sendMail({
         ...mail,
         password: await readSecret(dir, 'smtp'),
@@ -193,7 +193,7 @@ function registerIpc({ getWindow, setDirty }) {
         subject,
         text,
         attachments: [{
-          filename: path.basename(req.file),
+          filename,
           content,
           contentType: 'text/plain; charset=utf-8',
         }],
